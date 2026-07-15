@@ -9,6 +9,7 @@ const ACTIVITY_TYPES: ActivityType[] = [
   'Meeting', 'Waiting', 'Break', 'Other'
 ];
 
+
 const PRIORITIES: Priority[] = ['Low', 'Medium', 'High', 'Urgent'];
 
 export const ActivityTracker = () => {
