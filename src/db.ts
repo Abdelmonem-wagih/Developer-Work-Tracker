@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { JiraIssue } from './types/jira';
 
 export type ActivityType =
   | 'Feature Development'
@@ -31,6 +32,10 @@ export interface Activity {
   duration?: number; // in seconds
   notes?: string;
   status: 'active' | 'paused' | 'completed';
+  // Jira integration fields
+  jiraKey?: string;
+  jiraStatus?: string;
+  jiraType?: string;
 }
 
 export interface Blocker {
@@ -60,14 +65,16 @@ export class MyDatabase extends Dexie {
   blockers!: Table<Blocker>;
   projects!: Table<Project>;
   teams!: Table<Team>;
+  jiraIssues!: Table<JiraIssue>;
 
   constructor() {
     super('DeveloperWorkTracker');
-    this.version(4).stores({
-      activities: '++id, type, project, status, startTime',
+    this.version(5).stores({
+      activities: '++id, type, project, status, startTime, jiraKey',
       blockers: '++id, team, startTime',
       projects: '++id, name',
-      teams: '++id, name'
+      teams: '++id, name',
+      jiraIssues: '++id, key, summary, project, status'
     });
   }
 }
