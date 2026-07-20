@@ -46,6 +46,7 @@ interface SidebarProps {
 export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
   const items = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: 'jira', label: 'Jira', icon: <Layers size={20} /> },
     { id: 'tracker', label: 'Activity Tracker', icon: <Timer size={20} /> },
     { id: 'blockers', label: 'Blockers', icon: <AlertCircle size={20} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={20} /> },

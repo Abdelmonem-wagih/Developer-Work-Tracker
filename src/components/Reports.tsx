@@ -45,6 +45,7 @@ export const Reports = () => {
     try {
       const allActivities = await db.activities.toArray();
       const allBlockers = await db.blockers.toArray();
+      const now = new Date();
 
       const formattedActivities = allActivities.map(a => ({
         ...a,
@@ -61,10 +62,16 @@ export const Reports = () => {
       }));
 
       const data = {
-        exportDate: new Date().toISOString(),
-        generatedTime: formatTime(new Date()),
-        activities: formattedActivities,
-        blockers: formattedBlockers,
+        metadata: {
+          reportTitle: "Developer Work Report",
+          generatedDate: formatDate(now),
+          generatedTime: formatTime(now),
+          createdBy: "Abdelmonuem Wagih"
+        },
+        data: {
+          activities: formattedActivities,
+          blockers: formattedBlockers,
+        }
       };
 
       downloadFile(JSON.stringify(data, null, 2), `work-tracker-export-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
@@ -80,15 +87,22 @@ export const Reports = () => {
     try {
       const allActivities = await db.activities.toArray();
       const allBlockers = await db.blockers.toArray();
+      const now = new Date();
 
-      let csvContent = "TYPE,TASK/REASON,PROJECT/TEAM,CATEGORY/IMPACT,START DATE,START TIME,END DATE,END TIME,DURATION,NOTES\n";
+      let csvContent = "REPORT INFORMATION\n";
+      csvContent += `Report Name,Developer Work Report\n`;
+      csvContent += `Generated Date,${formatDate(now)}\n`;
+      csvContent += `Generated Time,${formatTime(now)}\n`;
+      csvContent += `Created By,Abdelmonuem Wagih\n\n`;
+
+      csvContent += "TYPE,TASK/REASON,PROJECT/TEAM,JIRA KEY,JIRA STATUS,PRIORITY,CATEGORY/IMPACT,START DATE,START TIME,END DATE,END TIME,DURATION,NOTES\n";
 
       allActivities.forEach(a => {
-        csvContent += `Activity,"${a.taskName}","${a.project}",${a.type},${formatDate(a.startTime)},${formatTime(a.startTime)},${a.endTime ? formatDate(a.endTime) : ''},${a.endTime ? formatTime(a.endTime) : ''},"${formatDuration(a.duration || 0)}","${a.notes || ''}"\n`;
+        csvContent += `Activity,"${a.taskName}","${a.project}","${a.jiraKey || ''}","${a.jiraStatus || ''}","${a.priority}",${a.type},${formatDate(a.startTime)},${formatTime(a.startTime)},${a.endTime ? formatDate(a.endTime) : ''},${a.endTime ? formatTime(a.endTime) : ''},"${formatDuration(a.duration || 0)}","${a.notes || ''}"\n`;
       });
 
       allBlockers.forEach(b => {
-        csvContent += `Blocker,"${b.reason}","${b.team}",${b.impact},${formatDate(b.startTime)},${formatTime(b.startTime)},${b.endTime ? formatDate(b.endTime) : ''},${b.endTime ? formatTime(b.endTime) : ''},"${formatDuration(b.duration || 0)}","${b.notes || ''}"\n`;
+        csvContent += `Blocker,"${b.reason}","${b.team}","","","${b.impact}",${b.impact},${formatDate(b.startTime)},${formatTime(b.startTime)},${b.endTime ? formatDate(b.endTime) : ''},${b.endTime ? formatTime(b.endTime) : ''},"${formatDuration(b.duration || 0)}","${b.notes || ''}"\n`;
       });
 
       downloadFile(csvContent, `work-report-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
@@ -104,13 +118,15 @@ export const Reports = () => {
     try {
       const allActivities = await db.activities.toArray();
       const allBlockers = await db.blockers.toArray();
+      const now = new Date();
 
       const totalWorkSec = allActivities.reduce((acc, curr) => acc + (curr.duration || 0), 0);
       const totalBlockSec = allBlockers.reduce((acc, curr) => acc + (curr.duration || 0), 0);
 
-      let md = `# Developer Daily Report\n\n`;
-      md += `**Date:** ${formatDate(new Date())}\n`;
-      md += `**Generated At:** ${formatTime(new Date())}\n\n`;
+      let md = `# Developer Work Report\n\n`;
+      md += `**Generated Date:** ${formatDate(now)}\n`;
+      md += `**Generated Time:** ${formatTime(now)}\n`;
+      md += `**Created By:** Abdelmonuem Wagih\n\n`;
 
       md += `## Summary\n\n`;
       md += `- **Total Working Time:** ${formatDuration(totalWorkSec)}\n`;
@@ -248,11 +264,11 @@ export const Reports = () => {
         <div className="border-b-2 border-black pb-4 mb-8 flex justify-between items-end">
           <div>
             <h1 className="text-4xl font-black uppercase tracking-tighter">Developer Work Report</h1>
-            <p className="text-gray-600 font-medium">Employee: [Your Name Here]</p>
+            <p className="text-gray-600 font-medium">Created By: Abdelmonuem Wagih</p>
           </div>
           <div className="text-right">
             <p className="font-bold">Date: {formatDate(new Date())}</p>
-            <p className="text-sm text-gray-500">Generated: {formatTime(new Date())}</p>
+            <p className="text-sm text-gray-500">Time: {formatTime(new Date())}</p>
           </div>
         </div>
 
@@ -280,11 +296,10 @@ export const Reports = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b-2 border-black text-left">
+                <th className="py-2">Jira Key</th>
                 <th className="py-2">Task</th>
                 <th className="py-2">Project</th>
                 <th className="py-2">Type</th>
-                <th className="py-2">Start</th>
-                <th className="py-2">End</th>
                 <th className="py-2 text-right">Duration</th>
               </tr>
             </thead>
@@ -292,11 +307,10 @@ export const Reports = () => {
               {activities?.map((a, i) => (
                 <React.Fragment key={a.id}>
                   <tr className={i % 2 === 0 ? 'bg-gray-50' : ''}>
+                    <td className="py-2 font-mono text-xs">{a.jiraKey || '-'}</td>
                     <td className="py-2 font-bold">{a.taskName}</td>
                     <td className="py-2">{a.project}</td>
                     <td className="py-2">{a.type}</td>
-                    <td className="py-2">{formatTime(a.startTime)}</td>
-                    <td className="py-2">{a.endTime ? formatTime(a.endTime) : '-'}</td>
                     <td className="py-2 text-right font-mono font-bold">{formatDuration(a.duration || 0)}</td>
                   </tr>
                   {a.description && (

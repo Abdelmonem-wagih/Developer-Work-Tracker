@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { Dashboard } from './components/Dashboard'
+import { JiraDashboard } from './components/JiraDashboard'
 import { ActivityTracker } from './components/ActivityTracker'
 import { BlockerTracker } from './components/BlockerTracker'
 import { Timeline } from './components/Timeline'
 import { Analytics } from './components/Analytics'
 import { Reports } from './components/Reports'
 import { Settings } from './components/Settings'
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, Timer, ExternalLink } from 'lucide-react'
+import { db } from './db'
+import { useLiveQuery } from 'dexie-react-hooks'
 
 function App() {
   console.log("[BOOT] App rendering...");
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDark, setIsDark] = useState(false);
+
+  // Global Active Timer state
+  const activeActivity = useLiveQuery(() => db.activities.where('status').equals('active').first());
 
   useEffect(() => {
     console.log("[BOOT] App mounted/effect triggered");
@@ -26,6 +32,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
+      case 'jira': return <JiraDashboard />;
       case 'tracker': return <ActivityTracker />;
       case 'blockers': return <BlockerTracker />;
       case 'timeline': return <Timeline />;
@@ -54,6 +61,26 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {activeActivity && (
+              <div
+                className="flex items-center gap-3 px-4 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full cursor-pointer hover:bg-green-500/20 transition-all"
+                onClick={() => {
+                  if (activeActivity.jiraKey) {
+                    setActiveTab('jira');
+                    // We might need a way to trigger the detail view,
+                    // but for now switching to Jira tab is a good start.
+                  }
+                }}
+              >
+                <div className="flex flex-col items-end mr-1">
+                  <span className="text-[10px] font-bold text-green-600 uppercase tracking-tighter leading-none">Active Timer</span>
+                  <span className="text-xs font-mono font-bold leading-none">{activeActivity.jiraKey || activeActivity.taskName}</span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg shadow-green-500/30 animate-pulse">
+                  <Timer size={16} />
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setIsDark(!isDark)}
               className="p-2 rounded-full hover:bg-secondary transition-colors"

@@ -2,6 +2,7 @@ import React from 'react';
 import Dexie from 'dexie';
 import { db } from '../db';
 import { Trash2, Plus, Database, Shield, Bell, User } from 'lucide-react';
+import { JiraSettings } from './JiraSettings';
 
 export const Settings = () => {
   const handleReset = async () => {
@@ -37,6 +38,8 @@ export const Settings = () => {
         </aside>
 
         <div className="md:col-span-3 space-y-8">
+          <JiraSettings />
+
           <section className="bg-card border rounded-2xl p-6">
             <h3 className="text-lg font-semibold mb-4">Appearance</h3>
             <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">

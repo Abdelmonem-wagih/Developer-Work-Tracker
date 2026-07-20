@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { db, ActivityType, Priority } from '../db';
-import { Plus, Trash2, Calendar, Clock, BookOpen, StickyNote } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, BookOpen, StickyNote, Search, ExternalLink } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { jiraRepository } from '../repositories/jiraRepository';
+import { JiraIssue } from '../types/jira';
+import { getJiraConfig } from '../services/jira/config';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Feature Development', 'Bug Fix', 'Refactoring', 'Testing',
   'Code Review', 'Documentation', 'Deployment', 'Research',
   'Meeting', 'Waiting', 'Break', 'Other'
 ];
+
 
 const PRIORITIES: Priority[] = ['Low', 'Medium', 'High', 'Urgent'];
 
@@ -18,6 +22,53 @@ export const ActivityTracker = () => {
   const [priority, setPriority] = useState<Priority>('Medium');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Jira-specific state
+  const [jiraSearch, setJiraSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<JiraIssue[]>([]);
+  const [selectedJiraIssue, setSelectedJiraIssue] = useState<JiraIssue | null>(null);
+  const jiraConfig = getJiraConfig();
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (jiraSearch.trim().length > 1) {
+        const results = await jiraRepository.search(jiraSearch);
+        setSearchResults(results);
+      } else {
+        setSearchResults([]);
+      }
+    };
+    const timer = setTimeout(performSearch, 300);
+    return () => clearTimeout(timer);
+  }, [jiraSearch]);
+
+  const selectJiraIssue = (issue: JiraIssue) => {
+    setSelectedJiraIssue(issue);
+    setTaskName(issue.summary);
+    setProject(issue.project);
+    // Map Jira priority to our app priority
+    const priorityMap: Record<string, Priority> = {
+      'Highest': 'Urgent',
+      'High': 'High',
+      'Medium': 'Medium',
+      'Low': 'Low',
+      'Lowest': 'Low'
+    };
+    setPriority(priorityMap[issue.priority] || 'Medium');
+
+    // Map Jira type to our activity type
+    const typeMap: Record<string, ActivityType> = {
+      'Bug': 'Bug Fix',
+      'Story': 'Feature Development',
+      'Task': 'Feature Development',
+      'Sub-task': 'Feature Development',
+      'Epic': 'Feature Development'
+    };
+    setType(typeMap[issue.issueType] || 'Feature Development');
+
+    setJiraSearch('');
+    setSearchResults([]);
+  };
 
   const now = new Date();
   const [startDate, setStartDate] = useState(now.toISOString().split('T')[0]);
@@ -79,6 +130,9 @@ export const ActivityTracker = () => {
         endTime: end,
         duration: diffSec,
         tags: [],
+        jiraKey: selectedJiraIssue?.key,
+        jiraStatus: selectedJiraIssue?.status,
+        jiraType: selectedJiraIssue?.issueType,
       });
 
       // Reset form
@@ -86,6 +140,7 @@ export const ActivityTracker = () => {
       setProject('');
       setDescription('');
       setNotes('');
+      setSelectedJiraIssue(null);
     } catch (err) {
       console.error(err);
     }
@@ -120,6 +175,47 @@ export const ActivityTracker = () => {
           <Plus className="text-primary" /> Log New Activity
         </h3>
         <form onSubmit={handleSave} className="space-y-6">
+          {/* Jira Search Section */}
+          <div className="relative">
+            <label className="text-xs font-semibold uppercase text-primary flex items-center gap-1 mb-1.5">
+              <Search size={12} /> Search Jira Issue
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Search by key, summary, or project..."
+                value={jiraSearch}
+                onChange={(e) => setJiraSearch(e.target.value)}
+                className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-sm focus:ring-2 ring-primary/20 w-full"
+              />
+              {selectedJiraIssue && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm font-bold text-primary flex items-center gap-2">
+                  {selectedJiraIssue.key}
+                  <button type="button" onClick={() => setSelectedJiraIssue(null)} className="hover:text-destructive">×</button>
+                </div>
+              )}
+            </div>
+
+            {searchResults.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-card border rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                {searchResults.map(issue => (
+                  <button
+                    key={issue.key}
+                    type="button"
+                    onClick={() => selectJiraIssue(issue)}
+                    className="w-full text-left p-3 hover:bg-secondary/50 border-b last:border-0 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-[10px] font-bold text-primary">{issue.key}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">{issue.project}</span>
+                    </div>
+                    <div className="text-sm font-medium line-clamp-1">{issue.summary}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
@@ -283,6 +379,16 @@ export const ActivityTracker = () => {
                         {activity.priority}
                       </span>
                       <span className="text-xs text-muted-foreground font-medium">{activity.project}</span>
+                      {activity.jiraKey && (
+                        <a
+                          href={`${jiraConfig.url.replace(/\/$/, '')}/browse/${activity.jiraKey}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline"
+                        >
+                          <ExternalLink size={10} /> {activity.jiraKey}
+                        </a>
+                      )}
                     </div>
                     <h4 className="font-bold text-lg">{activity.taskName}</h4>
                     {activity.description && <p className="text-sm text-muted-foreground mt-1">{activity.description}</p>}
