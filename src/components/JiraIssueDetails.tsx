@@ -7,6 +7,7 @@ import {
   Clock,
   Tag,
   ChevronDown,
+  ChevronRight,
   MessageSquare,
   History,
   Paperclip,
@@ -348,9 +349,11 @@ export const JiraIssueDetails: React.FC<JiraIssueDetailsProps> = ({ issueKey, on
             </button>
           )}
           <button onClick={fetchIssueDetails} className="p-2 hover:bg-secondary rounded-lg transition-colors"><RefreshCw size={18} /></button>
-          <a href={`${import.meta.env.VITE_JIRA_URL}/browse/${model.key}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold shadow-sm">
-            <ExternalLink size={14} /> Open in Jira
-          </a>
+          {import.meta.env.VITE_JIRA_URL && (
+            <a href={`${import.meta.env.VITE_JIRA_URL}/browse/${model.key}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold shadow-sm">
+              <ExternalLink size={14} /> Open in Jira
+            </a>
+          )}
         </div>
       </header>
 

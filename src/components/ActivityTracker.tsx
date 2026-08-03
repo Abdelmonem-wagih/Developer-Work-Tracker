@@ -379,7 +379,7 @@ export const ActivityTracker = () => {
                         {activity.priority}
                       </span>
                       <span className="text-xs text-muted-foreground font-medium">{activity.project}</span>
-                      {activity.jiraKey && (
+                      {activity.jiraKey && jiraConfig.url && (
                         <a
                           href={`${jiraConfig.url.replace(/\/$/, '')}/browse/${activity.jiraKey}`}
                           target="_blank"

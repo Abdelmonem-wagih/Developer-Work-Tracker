@@ -13,7 +13,9 @@ export class JiraRepository {
       for (const issue of issues) {
         const existing = await db.jiraIssues.where('key').equals(issue.key).first();
         if (existing) {
-          await db.jiraIssues.update(existing.id!, issue);
+          // Use a spread to avoid type issues with Dexie's UpdateSpec
+          const { id: _id, ...updateData } = issue;
+          await db.jiraIssues.update(existing.id!, updateData);
         } else {
           await db.jiraIssues.add(issue);
         }
