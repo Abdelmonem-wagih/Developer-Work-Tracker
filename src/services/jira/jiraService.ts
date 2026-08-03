@@ -1,17 +1,53 @@
 import { JiraIssue, JiraMyself } from '../../types/jira';
 
 class JiraService {
-  private async fetchApi<T>(path: string): Promise<T> {
+  private async fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(path, {
-      method: 'GET',
+      ...options,
       headers: {
         'Accept': 'application/json',
+        ...(options.headers || {}),
       },
     });
 
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.includes('application/json');
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(error.message || `API error: ${response.status}`);
+      let errorMessage = `API error: ${response.status}`;
+      try {
+        if (isJson) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        }
+      } catch (e) {
+        // Fallback to status text
+      }
+      throw new Error(errorMessage);
+    }
+
+    if (!isJson) {
+      const text = await response.text();
+      // Detect if we received source code (common misconfiguration in dev)
+      if (text.trim().startsWith('import') || text.trim().startsWith('export')) {
+        throw new Error(
+          'API returned source code instead of JSON. \n' +
+          'Ensure you are running "vercel dev" and the API proxy in vite.config.ts is correctly configured.'
+        );
+      }
+
+      // If it's HTML, it's likely the SPA fallback (index.html)
+      if (text.trim().toLowerCase().startsWith('<!doctype html') || text.includes('<html')) {
+        throw new Error(
+          `API returned HTML instead of JSON.\n\n` +
+          `1. Ensure you are running "vercel dev".\n` +
+          `2. Ensure you are accessing the app via http://localhost:3000 (NOT the Vite port).\n` +
+          `3. If using "vercel dev", check the terminal for any API compilation errors.\n\n` +
+          `Requested URL: ${path}`
+        );
+      }
+
+      throw new Error(`Expected JSON response but received: ${contentType || 'plain text'}\nBody: ${text.substring(0, 100)}...`);
     }
 
     return response.json();
@@ -45,12 +81,11 @@ class JiraService {
   }
 
   async doTransition(key: string, transitionId: string): Promise<void> {
-    const response = await fetch(`/api/jira/transitions?key=${key}`, {
+    await this.fetchApi<void>(`/api/jira/transitions?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ transitionId }),
     });
-    if (!response.ok) throw new Error('Failed to transition issue');
   }
 
   async getComments(key: string): Promise<any> {
@@ -58,12 +93,11 @@ class JiraService {
   }
 
   async addComment(key: string, body: any): Promise<any> {
-    const response = await fetch(`/api/jira/comments?key=${key}`, {
+    return this.fetchApi<any>(`/api/jira/comments?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body }),
     });
-    return response.json();
   }
 }
 
