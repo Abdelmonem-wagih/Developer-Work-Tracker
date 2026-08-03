@@ -138,7 +138,9 @@ export const Reports = () => {
       md += `| Task | Project | Start | End | Duration |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- |\n`;
       allActivities.forEach(a => {
-        md += `| ${a.taskName} | ${a.project} | ${formatTime(a.startTime)} | ${a.endTime ? formatTime(a.endTime) : '-'} | ${formatDuration(a.duration || 0)} |\n`;
+        const start = `${formatDate(a.startTime)} ${formatTime(a.startTime)}`;
+        const end = a.endTime ? `${formatDate(a.endTime)} ${formatTime(a.endTime)}` : '-';
+        md += `| ${a.taskName} | ${a.project} | ${start} | ${end} | ${formatDuration(a.duration || 0)} |\n`;
       });
       md += `\n`;
 
@@ -146,7 +148,9 @@ export const Reports = () => {
       md += `| Team | Reason | Start | End | Duration |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- |\n`;
       allBlockers.forEach(b => {
-        md += `| ${b.team} | ${b.reason} | ${formatTime(b.startTime)} | ${b.endTime ? formatTime(b.endTime) : '-'} | ${formatDuration(b.duration || 0)} |\n`;
+        const start = `${formatDate(b.startTime)} ${formatTime(b.startTime)}`;
+        const end = b.endTime ? `${formatDate(b.endTime)} ${formatTime(b.endTime)}` : '-';
+        md += `| ${b.team} | ${b.reason} | ${start} | ${end} | ${formatDuration(b.duration || 0)} |\n`;
       });
       md += `\n`;
 
@@ -300,6 +304,8 @@ export const Reports = () => {
                 <th className="py-2">Task</th>
                 <th className="py-2">Project</th>
                 <th className="py-2">Type</th>
+                <th className="py-2">Start</th>
+                <th className="py-2">End</th>
                 <th className="py-2 text-right">Duration</th>
               </tr>
             </thead>
@@ -311,18 +317,20 @@ export const Reports = () => {
                     <td className="py-2 font-bold">{a.taskName}</td>
                     <td className="py-2">{a.project}</td>
                     <td className="py-2">{a.type}</td>
+                    <td className="py-2 text-[10px] leading-tight">{formatDate(a.startTime)}<br/>{formatTime(a.startTime)}</td>
+                    <td className="py-2 text-[10px] leading-tight">{a.endTime ? <>{formatDate(a.endTime)}<br/>{formatTime(a.endTime)}</> : '-'}</td>
                     <td className="py-2 text-right font-mono font-bold">{formatDuration(a.duration || 0)}</td>
                   </tr>
                   {a.description && (
                     <tr className={i % 2 === 0 ? 'bg-gray-50' : ''}>
-                      <td colSpan={6} className="pb-1 pt-0 text-xs text-gray-700 px-4">
+                      <td colSpan={7} className="pb-1 pt-0 text-xs text-gray-700 px-4">
                         <span className="font-semibold">Description:</span> {a.description}
                       </td>
                     </tr>
                   )}
                   {a.notes && (
                     <tr className={i % 2 === 0 ? 'bg-gray-50' : ''}>
-                      <td colSpan={6} className="pb-2 pt-0 text-xs text-gray-500 italic px-4">
+                      <td colSpan={7} className="pb-2 pt-0 text-xs text-gray-500 italic px-4">
                         <span className="font-semibold">Note:</span> {a.notes}
                       </td>
                     </tr>
@@ -353,8 +361,8 @@ export const Reports = () => {
                     <td className="py-2 font-bold">{b.reason}</td>
                     <td className="py-2">{b.team}</td>
                     <td className="py-2">{b.impact}</td>
-                    <td className="py-2">{formatTime(b.startTime)}</td>
-                    <td className="py-2">{b.endTime ? formatTime(b.endTime) : '-'}</td>
+                    <td className="py-2 text-[10px] leading-tight">{formatDate(b.startTime)}<br/>{formatTime(b.startTime)}</td>
+                    <td className="py-2 text-[10px] leading-tight">{b.endTime ? <>{formatDate(b.endTime)}<br/>{formatTime(b.endTime)}</> : '-'}</td>
                     <td className="py-2 text-right font-mono font-bold text-red-600">{formatDuration(b.duration || 0)}</td>
                   </tr>
                   {b.description && (
