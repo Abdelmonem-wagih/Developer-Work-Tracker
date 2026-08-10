@@ -47,9 +47,6 @@ export const jiraFetch = async (path: string, options: RequestInit = {}) => {
 
     const error = new Error(errorText || `Jira API error: ${response.status}`);
     (error as any).status = response.status;
-
-    throw error;
-    (error as any).status = response.status;
     throw error;
   }
 

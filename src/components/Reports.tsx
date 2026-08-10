@@ -129,36 +129,36 @@ export const Reports = () => {
       md += `**Created By:** Abdelmonuem Wagih\n\n`;
 
       md += `## Summary\n\n`;
-      md += `- **Total Working Time:** ${formatDuration(totalWorkSec)}\n`;
-      md += `- **Total Blocked Time:** ${formatDuration(totalBlockSec)}\n`;
-      md += `- **Activities:** ${allActivities.length}\n`;
-      md += `- **Blockers:** ${allBlockers.length}\n\n`;
+      md += `| | |\n`;
+      md += `| :--- | :--- |\n`;
+      md += `| Total Working Time | ${formatDuration(totalWorkSec)} |\n`;
+      md += `| Total Blocked Time | ${formatDuration(totalBlockSec)} |\n`;
+      md += `| Activities | ${allActivities.length} |\n`;
+      md += `| Blockers | ${allBlockers.length} |\n\n`;
 
       md += `## Activity Timeline\n\n`;
-      md += `| Task | Project | Start | End | Duration |\n`;
-      md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+      md += `| Task | Jira | Project | Start | End | Duration |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       allActivities.forEach(a => {
         const start = `${formatDate(a.startTime)} ${formatTime(a.startTime)}`;
         const end = a.endTime ? `${formatDate(a.endTime)} ${formatTime(a.endTime)}` : '-';
-        md += `| ${a.taskName} | ${a.project} | ${start} | ${end} | ${formatDuration(a.duration || 0)} |\n`;
+        md += `| ${a.taskName} | ${a.jiraKey || ''} | ${a.project} | ${start} | ${end} | ${formatDuration(a.duration || 0)} |\n`;
       });
       md += `\n`;
 
       md += `## Blockers\n\n`;
-      md += `| Team | Reason | Start | End | Duration |\n`;
-      md += `| :--- | :--- | :--- | :--- | :--- |\n`;
-      allBlockers.forEach(b => {
-        const start = `${formatDate(b.startTime)} ${formatTime(b.startTime)}`;
-        const end = b.endTime ? `${formatDate(b.endTime)} ${formatTime(b.endTime)}` : '-';
-        md += `| ${b.team} | ${b.reason} | ${start} | ${end} | ${formatDuration(b.duration || 0)} |\n`;
-      });
+      if (allBlockers.length === 0) {
+        md += `No blockers recorded.\n`;
+      } else {
+        md += `| Team | Reason | Start | End | Duration |\n`;
+        md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+        allBlockers.forEach(b => {
+          const start = `${formatDate(b.startTime)} ${formatTime(b.startTime)}`;
+          const end = b.endTime ? `${formatDate(b.endTime)} ${formatTime(b.endTime)}` : '-';
+          md += `| ${b.team} | ${b.reason} | ${start} | ${end} | ${formatDuration(b.duration || 0)} |\n`;
+        });
+      }
       md += `\n`;
-
-      md += `## Statistics\n\n`;
-      md += `- **Total Activities:** ${allActivities.length}\n`;
-      md += `- **Total Blockers:** ${allBlockers.length}\n`;
-      md += `- **Working Time:** ${formatDuration(totalWorkSec)}\n`;
-      md += `- **Blocked Time:** ${formatDuration(totalBlockSec)}\n`;
 
       downloadFile(md, `daily-report-${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
     } catch (error) {
