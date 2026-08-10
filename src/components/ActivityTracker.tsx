@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db, ActivityType, Priority } from '../db';
-import { Plus, Trash2, Calendar, Clock, BookOpen, StickyNote, Search, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, BookOpen, StickyNote, Search, ExternalLink, RefreshCw } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { jiraRepository } from '../repositories/jiraRepository';
+import { jiraService } from '../services/jira/jiraService';
 import { JiraIssue } from '../types/jira';
 import { getJiraConfig } from '../services/jira/config';
 
@@ -26,26 +27,59 @@ export const ActivityTracker = () => {
   // Jira-specific state
   const [jiraSearch, setJiraSearch] = useState('');
   const [searchResults, setSearchResults] = useState<JiraIssue[]>([]);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
   const [selectedJiraIssue, setSelectedJiraIssue] = useState<JiraIssue | null>(null);
   const jiraConfig = getJiraConfig();
 
   useEffect(() => {
     const performSearch = async () => {
       if (jiraSearch.trim().length > 1) {
+        // First try local search
         const results = await jiraRepository.search(jiraSearch);
         setSearchResults(results);
+
+        // If local search is empty or has few results, and we have a Jira URL, try remote search
+        if (results.length < 3 && jiraConfig.url) {
+          setIsSearchingRemote(true);
+          try {
+            // Use a simple JQL for remote search
+            const jql = `text ~ "${jiraSearch}*" OR key = "${jiraSearch}" OR summary ~ "${jiraSearch}*"`;
+            const remoteResults = await jiraService.searchMyIssues(jql);
+
+            // Combine results, avoiding duplicates
+            const combined = [...results];
+            remoteResults.forEach(remote => {
+              if (!combined.some(local => local.key === remote.key)) {
+                combined.push(remote);
+              }
+            });
+            setSearchResults(combined);
+          } catch (err) {
+            console.error('Remote search failed:', err);
+          } finally {
+            setIsSearchingRemote(false);
+          }
+        }
       } else {
         setSearchResults([]);
       }
     };
-    const timer = setTimeout(performSearch, 300);
+    const timer = setTimeout(performSearch, 500); // Slightly longer debounce for remote search
     return () => clearTimeout(timer);
-  }, [jiraSearch]);
+  }, [jiraSearch, jiraConfig.url]);
 
-  const selectJiraIssue = (issue: JiraIssue) => {
+  const selectJiraIssue = async (issue: JiraIssue) => {
     setSelectedJiraIssue(issue);
     setTaskName(issue.summary);
     setProject(issue.project);
+
+    // Save to local cache so it appears in local search next time
+    try {
+      await jiraRepository.saveAll([issue]);
+    } catch (err) {
+      console.error('Failed to cache selected issue:', err);
+    }
+
     // Map Jira priority to our app priority
     const priorityMap: Record<string, Priority> = {
       'Highest': 'Urgent',
@@ -181,13 +215,20 @@ export const ActivityTracker = () => {
               <Search size={12} /> Search Jira Issue
             </label>
             <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Search by key, summary, or project..."
-                value={jiraSearch}
-                onChange={(e) => setJiraSearch(e.target.value)}
-                className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-sm focus:ring-2 ring-primary/20 w-full"
-              />
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="Search by key, summary, or project..."
+                  value={jiraSearch}
+                  onChange={(e) => setJiraSearch(e.target.value)}
+                  className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-sm focus:ring-2 ring-primary/20 w-full pr-10"
+                />
+                {isSearchingRemote && (
+                  <div className="absolute right-3 top-2.5">
+                    <RefreshCw size={14} className="animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
               {selectedJiraIssue && (
                 <div className="bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm font-bold text-primary flex items-center gap-2">
                   {selectedJiraIssue.key}
@@ -212,6 +253,11 @@ export const ActivityTracker = () => {
                     <div className="text-sm font-medium line-clamp-1">{issue.summary}</div>
                   </button>
                 ))}
+              </div>
+            )}
+            {jiraSearch.length > 1 && searchResults.length === 0 && !isSearchingRemote && (
+              <div className="absolute z-20 mt-1 w-full bg-card border rounded-xl shadow-xl p-4 text-center text-sm text-muted-foreground">
+                No issues found. Make sure you have configured Jira and synced your tasks.
               </div>
             )}
           </div>
@@ -379,7 +425,7 @@ export const ActivityTracker = () => {
                         {activity.priority}
                       </span>
                       <span className="text-xs text-muted-foreground font-medium">{activity.project}</span>
-                      {activity.jiraKey && (
+                      {activity.jiraKey && jiraConfig.url && (
                         <a
                           href={`${jiraConfig.url.replace(/\/$/, '')}/browse/${activity.jiraKey}`}
                           target="_blank"

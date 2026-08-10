@@ -170,7 +170,13 @@ export const JiraDashboard: React.FC = () => {
             <Search className="text-muted-foreground" size={32} />
           </div>
           <h3 className="text-lg font-bold">No issues found</h3>
-          <p className="text-muted-foreground max-w-xs mx-auto">Try adjusting your search or filters, or refresh to sync from Jira.</p>
+          <p className="text-muted-foreground max-w-xs mx-auto mb-4">Try adjusting your search or filters, or refresh to sync from Jira.</p>
+          <button
+            onClick={() => syncIssues()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-sm"
+          >
+            Sync from Jira Now
+          </button>
         </div>
       ) : viewMode === 'list' ? (
         <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
